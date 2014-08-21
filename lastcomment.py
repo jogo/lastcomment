@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """Print the last time a reviewer(bot) left a comment."""
 
 import json
