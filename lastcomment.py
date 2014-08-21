@@ -2,6 +2,7 @@
 
 """Print the last time a reviewer(bot) left a comment."""
 
+import argparse
 import json
 import time
 
@@ -12,21 +13,26 @@ TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 def main():
-    # unique gerrit name of the reviewer
-    #reviewer = "VMware NSX CI"
-    reviewer = "Elastic Recheck"
+    parser = argparse.ArgumentParser(description='list most recent comment by '
+                                     'reviewer')
+    parser.add_argument('-n', '--name',
+                        default="Elastic Recheck",
+                        help='unique gerrit name of the reviewer')
+    # name = "VMware NSX CI"
+    args = parser.parse_args()
     # Include review messages in query
-    query = "https://review.openstack.org/changes/?q=reviewer:\"%s\"&o=MESSAGES" % (reviewer)
+    query = ("https://review.openstack.org/changes/?q=reviewer:\"%s\"&"
+             "o=MESSAGES" % (args.name))
     r = requests.get(query)
     changes = json.loads(r.text[4:])
     last_date = None
     last_change_id = None
     for change in changes:
-        date = last_comment(change, reviewer)
+        date = last_comment(change, args.name)
         if date > last_date:
             last_date = date
             last_change_id = change['change_id']
-    print "last comment from '%s'" % reviewer
+    print "last comment from '%s'" % args.name
     print "timestamp: %s" % time.strftime(TIME_FORMAT, last_date)
     print "subject: '%s'" % change['subject']
     print "https://review.openstack.org/#q,%s,n,z" % last_change_id
