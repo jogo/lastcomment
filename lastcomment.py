@@ -27,14 +27,16 @@ def main():
     changes = json.loads(r.text[4:])
     last_date = None
     last_change_id = None
+    last_change_subject = None
     for change in changes:
         date = last_comment(change, args.name)
         if date > last_date:
             last_date = date
             last_change_id = change['change_id']
+            last_change_subject = change['subject']
     print "last comment from '%s'" % args.name
     print "timestamp: %s" % time.strftime(TIME_FORMAT, last_date)
-    print "subject: '%s'" % change['subject']
+    print "subject: '%s'" % last_change_subject
     print "https://review.openstack.org/#q,%s,n,z" % last_change_id
 
 
