@@ -3,6 +3,7 @@
 """Print the last time a reviewer(bot) left a comment."""
 
 import argparse
+import copy
 import json
 import time
 
@@ -10,6 +11,27 @@ import requests
 
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
+class Comment(object):
+    date = None
+    change_id = None
+    subject = None
+
+    def __init__(self, date, change_id, subject):
+        super(Comment, self).__init__()
+        self.date = date
+        self.change_id = change_id
+        self.subject = subject
+
+    def __str__(self):
+        return ("%s '%s' https://review.openstack.org/#q,%s,n,z" % (
+            time.strftime(TIME_FORMAT, self.date),
+            self.subject, self.change_id))
+
+    def __le__(self, other):
+        # self < other
+        return self.date < other.date
 
 
 def main():
@@ -25,19 +47,16 @@ def main():
              "o=MESSAGES" % (args.name))
     r = requests.get(query)
     changes = json.loads(r.text[4:])
-    last_date = None
-    last_change_id = None
-    last_change_subject = None
+
+    comment = None
     for change in changes:
         date = last_comment(change, args.name)
-        if date > last_date:
-            last_date = date
-            last_change_id = change['change_id']
-            last_change_subject = change['subject']
+        current_comment = Comment(date, change['change_id'],
+                                  change['subject'])
+        if not comment or comment < current_comment:
+            comment = copy.copy(current_comment)
     print "last comment from '%s'" % args.name
-    print "timestamp: %s" % time.strftime(TIME_FORMAT, last_date)
-    print "subject: '%s'" % last_change_subject
-    print "https://review.openstack.org/#q,%s,n,z" % last_change_id
+    print comment
 
 
 def last_comment(change, name):
