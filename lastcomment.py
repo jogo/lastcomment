@@ -40,34 +40,6 @@ class Comment(object):
         return repr((self.date, self.number))
 
 
-def main():
-    parser = argparse.ArgumentParser(description='list most recent comment by '
-                                     'reviewer')
-    parser.add_argument('-n', '--name',
-                        default="Elastic Recheck",
-                        help='unique gerrit name of the reviewer')
-    # name = "VMware NSX CI"
-    args = parser.parse_args()
-    # Include review messages in query
-    query = ("https://review.openstack.org/changes/?q=reviewer:\"%s\"&"
-             "o=MESSAGES" % (args.name))
-    r = requests.get(query)
-    changes = json.loads(r.text[4:])
-
-    comments = []
-    for change in changes:
-        date = last_comment(change, args.name)
-        comments.append(Comment(date, change['_number'],
-                                change['subject']))
-
-    COUNT = 10
-    print "last %s comments from '%s'" % (COUNT, args.name)
-    for i, comment in enumerate(sorted(comments,
-                                       key=lambda comment: comment.date,
-                                       reverse=True)[0:COUNT]):
-        print "[%d] %s" % (i, comment)
-
-
 def last_comment(change, name):
     """Return most recent timestamp for comment by name."""
     last_date = None
@@ -81,6 +53,38 @@ def last_comment(change, name):
             if not last_date or date > last_date:
                 last_date = date
     return last_date
+
+
+def print_last_comments(name):
+    # Include review messages in query
+    query = ("https://review.openstack.org/changes/?q=reviewer:\"%s\"&"
+             "o=MESSAGES" % (name))
+    r = requests.get(query)
+    changes = json.loads(r.text[4:])
+
+    comments = []
+    for change in changes:
+        date = last_comment(change, name)
+        comments.append(Comment(date, change['_number'],
+                                change['subject']))
+
+    COUNT = 5
+    print "last %s comments from '%s'" % (COUNT, name)
+    for i, comment in enumerate(sorted(comments,
+                                       key=lambda comment: comment.date,
+                                       reverse=True)[0:COUNT]):
+        print "[%d] %s" % (i, comment)
+
+
+def main():
+    parser = argparse.ArgumentParser(description='list most recent comment by '
+                                     'reviewer')
+    parser.add_argument('-n', '--name',
+                        default="Elastic Recheck",
+                        help='unique gerrit name of the reviewer')
+    # name = "VMware NSX CI"
+    args = parser.parse_args()
+    print_last_comments(args.name)
 
 
 if __name__ == "__main__":
