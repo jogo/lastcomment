@@ -3,8 +3,8 @@
 """Print the last time a reviewer(bot) left a comment."""
 
 import argparse
+import datetime
 import json
-import time
 
 import requests
 
@@ -16,16 +16,19 @@ class Comment(object):
     date = None
     number = None
     subject = None
+    now = None
 
     def __init__(self, date, number, subject):
         super(Comment, self).__init__()
         self.date = date
         self.number = number
         self.subject = subject
+        self.now = datetime.datetime.utcnow().replace(microsecond=0)
 
     def __str__(self):
-        return ("%s https://review.openstack.org/%s '%s' " % (
-            time.strftime(TIME_FORMAT, self.date),
+        return ("%s (%s old) https://review.openstack.org/%s '%s' " % (
+            self.date.strftime(TIME_FORMAT),
+            (self.now - self.date),
             self.number, self.subject))
 
     def __le__(self, other):
@@ -74,8 +77,8 @@ def last_comment(change, name):
             # https://review.openstack.org/Documentation/rest-api.html#timestamp
             # drop nanoseconds
             date = date.split('.')[0]
-            date = time.strptime(date, TIME_FORMAT)
-            if date > last_date:
+            date = datetime.datetime.strptime(date, TIME_FORMAT)
+            if not last_date or date > last_date:
                 last_date = date
     return last_date
 
