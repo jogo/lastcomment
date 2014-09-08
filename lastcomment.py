@@ -3,7 +3,6 @@
 """Print the last time a reviewer(bot) left a comment."""
 
 import argparse
-import copy
 import json
 import time
 
@@ -15,23 +14,27 @@ TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 class Comment(object):
     date = None
-    change_id = None
+    number = None
     subject = None
 
-    def __init__(self, date, change_id, subject):
+    def __init__(self, date, number, subject):
         super(Comment, self).__init__()
         self.date = date
-        self.change_id = change_id
+        self.number = number
         self.subject = subject
 
     def __str__(self):
-        return ("%s '%s' https://review.openstack.org/#q,%s,n,z" % (
+        return ("%s https://review.openstack.org/%s '%s' " % (
             time.strftime(TIME_FORMAT, self.date),
-            self.subject, self.change_id))
+            self.number, self.subject))
 
     def __le__(self, other):
         # self < other
         return self.date < other.date
+
+    def __repr__(self):
+        # for sorting
+        return repr((self.date, self.number))
 
 
 def main():
@@ -48,15 +51,18 @@ def main():
     r = requests.get(query)
     changes = json.loads(r.text[4:])
 
-    comment = None
+    comments = []
     for change in changes:
         date = last_comment(change, args.name)
-        current_comment = Comment(date, change['change_id'],
-                                  change['subject'])
-        if not comment or comment < current_comment:
-            comment = copy.copy(current_comment)
-    print "last comment from '%s'" % args.name
-    print comment
+        comments.append(Comment(date, change['_number'],
+                                change['subject']))
+
+    COUNT = 10
+    print "last %s comments from '%s'" % (COUNT, args.name)
+    for i, comment in enumerate(sorted(comments,
+                                       key=lambda comment: comment.date,
+                                       reverse=True)[0:COUNT]):
+        print "[%d] %s" % (i, comment)
 
 
 def last_comment(change, name):
