@@ -47,6 +47,10 @@ def last_comment(change, name):
     for message in change['messages']:
         if 'author' in message and message['author']['name'] == name:
             date = message['date']
+            if (message['message'].startswith("Uploaded patch set") and
+               len(message['message'].split()) is 4):
+                # comment is auto created from posting a new patch
+                continue
             # https://review.openstack.org/Documentation/rest-api.html#timestamp
             # drop nanoseconds
             date = date.split('.')[0]
