@@ -55,7 +55,7 @@ def last_comment(change, name):
     return last_date
 
 
-def print_last_comments(name):
+def print_last_comments(name, count):
     # Include review messages in query
     query = ("https://review.openstack.org/changes/?q=reviewer:\"%s\"&"
              "o=MESSAGES" % (name))
@@ -68,11 +68,10 @@ def print_last_comments(name):
         comments.append(Comment(date, change['_number'],
                                 change['subject']))
 
-    COUNT = 5
-    print "last %s comments from '%s'" % (COUNT, name)
+    print "last %s comments from '%s'" % (count, name)
     for i, comment in enumerate(sorted(comments,
                                        key=lambda comment: comment.date,
-                                       reverse=True)[0:COUNT]):
+                                       reverse=True)[0:count]):
         print "[%d] %s" % (i, comment)
 
 
@@ -82,9 +81,14 @@ def main():
     parser.add_argument('-n', '--name',
                         default="Elastic Recheck",
                         help='unique gerrit name of the reviewer')
+    parser.add_argument('-c', '--count',
+                        default=10,
+                        help='unique gerrit name of the reviewer')
+
+
     # name = "VMware NSX CI"
     args = parser.parse_args()
-    print_last_comments(args.name)
+    print_last_comments(args.name, int(args.count))
 
 
 if __name__ == "__main__":
