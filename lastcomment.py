@@ -65,10 +65,14 @@ def print_last_comments(name, count):
     comments = []
     for change in changes:
         date = last_comment(change, name)
+        if date is None:
+            # no comments from reviewer yet
+            continue
         comments.append(Comment(date, change['_number'],
                                 change['subject']))
 
     print "last %s comments from '%s'" % (count, name)
+    # sort by time
     for i, comment in enumerate(sorted(comments,
                                        key=lambda comment: comment.date,
                                        reverse=True)[0:count]):
@@ -85,8 +89,6 @@ def main():
                         default=10,
                         help='unique gerrit name of the reviewer')
 
-
-    # name = "VMware NSX CI"
     args = parser.parse_args()
     print_last_comments(args.name, int(args.count))
 
