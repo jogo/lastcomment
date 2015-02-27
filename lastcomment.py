@@ -5,6 +5,7 @@
 import argparse
 import datetime
 import json
+import sys
 
 import requests
 
@@ -60,7 +61,11 @@ def print_last_comments(name, count):
     query = ("https://review.openstack.org/changes/?q=reviewer:\"%s\"&"
              "o=MESSAGES" % (name))
     r = requests.get(query)
-    changes = json.loads(r.text[4:])
+    try:
+        changes = json.loads(r.text[4:])
+    except ValueError:
+        print "query: '%s' failed with:\n%s" % (query, r.text)
+        sys.exit(1)
 
     comments = []
     for change in changes:
