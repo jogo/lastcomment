@@ -19,11 +19,12 @@ class Comment(object):
     subject = None
     now = None
 
-    def __init__(self, date, number, subject):
+    def __init__(self, date, number, subject, message):
         super(Comment, self).__init__()
         self.date = date
         self.number = number
         self.subject = subject
+        self.message = message
         self.now = datetime.datetime.utcnow().replace(microsecond=0)
 
     def __str__(self):
@@ -44,9 +45,11 @@ class Comment(object):
 def last_comment(change, name):
     """Return most recent timestamp for comment by name."""
     last_date = None
+    body = None
     for message in change['messages']:
         if 'author' in message and message['author']['name'] == name:
             date = message['date']
+            body = message['message']
             if (message['message'].startswith("Uploaded patch set") and
                len(message['message'].split()) is 4):
                 # comment is auto created from posting a new patch
@@ -57,10 +60,10 @@ def last_comment(change, name):
             date = datetime.datetime.strptime(date, TIME_FORMAT)
             if not last_date or date > last_date:
                 last_date = date
-    return last_date
+    return last_date,  body
 
 
-def print_last_comments(name, count):
+def print_last_comments(name, count, print_message):
     # Include review messages in query
     query = ("https://review.openstack.org/changes/?q=reviewer:\"%s\"&"
              "o=MESSAGES" % (name))
@@ -73,12 +76,12 @@ def print_last_comments(name, count):
 
     comments = []
     for change in changes:
-        date = last_comment(change, name)
+        date, message = last_comment(change, name)
         if date is None:
             # no comments from reviewer yet
             continue
         comments.append(Comment(date, change['_number'],
-                                change['subject']))
+                                change['subject'], message))
 
     print "last %s comments from '%s'" % (count, name)
     # sort by time
@@ -86,6 +89,9 @@ def print_last_comments(name, count):
                                        key=lambda comment: comment.date,
                                        reverse=True)[0:count]):
         print "[%d] %s" % (i, comment)
+        if print_message:
+            print "message: \"%s\"" % comment.message
+            print
 
 
 def main():
@@ -97,9 +103,12 @@ def main():
     parser.add_argument('-c', '--count',
                         default=10,
                         help='unique gerrit name of the reviewer')
+    parser.add_argument('-m', '--message',
+                        action='store_true',
+                        help='print comment message')
 
     args = parser.parse_args()
-    print_last_comments(args.name, int(args.count))
+    print_last_comments(args.name, int(args.count), args.message)
 
 
 if __name__ == "__main__":
