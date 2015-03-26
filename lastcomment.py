@@ -48,12 +48,12 @@ def last_comment(change, name):
     body = None
     for message in change['messages']:
         if 'author' in message and message['author']['name'] == name:
-            date = message['date']
-            body = message['message']
             if (message['message'].startswith("Uploaded patch set") and
                len(message['message'].split()) is 4):
                 # comment is auto created from posting a new patch
                 continue
+            date = message['date']
+            body = message['message']
             # https://review.openstack.org/Documentation/rest-api.html#timestamp
             # drop nanoseconds
             date = date.split('.')[0]
@@ -78,7 +78,8 @@ def print_last_comments(name, count, print_message):
     for change in changes:
         date, message = last_comment(change, name)
         if date is None:
-            # no comments from reviewer yet
+            # no comments from reviewer yet. This can happen since 'Uploaded
+            # patch set X.' is considered a comment.
             continue
         comments.append(Comment(date, change['_number'],
                                 change['subject'], message))
