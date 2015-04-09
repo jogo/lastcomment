@@ -60,10 +60,10 @@ def last_comment(change, name):
             date = datetime.datetime.strptime(date, TIME_FORMAT)
             if not last_date or date > last_date:
                 last_date = date
-    return last_date,  body
+    return last_date, body
 
 
-def print_last_comments(name, count, print_message):
+def print_last_comments(name, count, print_message, project):
     # Include review messages in query
     query = ("https://review.openstack.org/changes/?q=reviewer:\"%s\"&"
              "o=MESSAGES" % (name))
@@ -76,6 +76,9 @@ def print_last_comments(name, count, print_message):
 
     comments = []
     for change in changes:
+        if project:
+            if change['project'] != project:
+                continue
         date, message = last_comment(change, name)
         if date is None:
             # no comments from reviewer yet. This can happen since 'Uploaded
@@ -107,9 +110,11 @@ def main():
     parser.add_argument('-m', '--message',
                         action='store_true',
                         help='print comment message')
+    parser.add_argument('-p', '--project',
+                        help='only list hits for a specific project')
 
     args = parser.parse_args()
-    print_last_comments(args.name, int(args.count), args.message)
+    print_last_comments(args.name, int(args.count), args.message, args.project)
 
 
 if __name__ == "__main__":
