@@ -87,7 +87,10 @@ def print_last_comments(name, count, print_message, project):
         comments.append(Comment(date, change['_number'],
                                 change['subject'], message))
 
-    print "last %s comments from '%s'" % (count, name)
+    message = "last %s comments from '%s'" % (count, name)
+    if project:
+        message+=" on project '%s'" % project
+    print message
     # sort by time
     for i, comment in enumerate(sorted(comments,
                                        key=lambda comment: comment.date,
