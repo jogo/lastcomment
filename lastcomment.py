@@ -43,9 +43,8 @@ class Comment(object):
         return repr((self.date, self.number))
 
 
-def last_comment(change, name):
-    """Return most recent timestamp for comment by name."""
-    last_date = None
+def get_comments(change, name):
+    """Generator that returns all comments by name on a given change."""
     body = None
     for message in change['messages']:
         if 'author' in message and message['author']['name'] == name:
@@ -59,9 +58,7 @@ def last_comment(change, name):
             # drop nanoseconds
             date = date.split('.')[0]
             date = datetime.datetime.strptime(date, TIME_FORMAT)
-            if not last_date or date > last_date:
-                last_date = date
-    return last_date, body
+            yield date, body
 
 
 def print_last_comments(name, count, print_message, project, votes):
@@ -83,13 +80,13 @@ def print_last_comments(name, count, print_message, project, votes):
         if project:
             if change['project'] != project:
                 continue
-        date, message = last_comment(change, name)
-        if date is None:
-            # no comments from reviewer yet. This can happen since 'Uploaded
-            # patch set X.' is considered a comment.
-            continue
-        comments.append(Comment(date, change['_number'],
-                                change['subject'], message))
+        for date, message in get_comments(change, name):
+            if date is None:
+                # no comments from reviewer yet. This can happen since
+                # 'Uploaded patch set X.' is considered a comment.
+                continue
+            comments.append(Comment(date, change['_number'],
+                                    change['subject'], message))
 
     message = "last %s comments from '%s'" % (count, name)
     if project:
