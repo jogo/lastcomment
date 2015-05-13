@@ -3,6 +3,7 @@
 """Print the last time a reviewer(bot) left a comment."""
 
 import argparse
+import collections
 import datetime
 import json
 import sys
@@ -63,7 +64,10 @@ def last_comment(change, name):
     return last_date, body
 
 
-def print_last_comments(name, count, print_message, project):
+def print_last_comments(name, count, print_message, project, votes):
+    success = collections.defaultdict(int)
+    failure = collections.defaultdict(int)
+
     # Include review messages in query
     query = ("https://review.openstack.org/changes/?q=reviewer:\"%s\"&"
              "o=MESSAGES" % (name))
@@ -89,7 +93,7 @@ def print_last_comments(name, count, print_message, project):
 
     message = "last %s comments from '%s'" % (count, name)
     if project:
-        message+=" on project '%s'" % project
+        message += " on project '%s'" % project
     print message
     # sort by time
     for i, comment in enumerate(sorted(comments,
@@ -99,6 +103,24 @@ def print_last_comments(name, count, print_message, project):
         if print_message:
             print "message: \"%s\"" % comment.message
             print
+        if votes:
+            for line in comment.message.splitlines():
+                if line.startswith("* ") or line.startswith("- "):
+                    job = line.split(' ')[1]
+                    if " : SUCCESS" in line:
+                        print line
+                        success[job] += 1
+                    if " : FAILURE" in line:
+                        print line
+                        failure[job] += 1
+
+    if votes:
+        print "success count by job:"
+        for job in success.iterkeys():
+            print "* %s: %d" % (job, success[job])
+        print "failure count by job:"
+        for job in failure.iterkeys():
+            print "* %s: %d" % (job, failure[job])
 
 
 def main():
@@ -113,11 +135,16 @@ def main():
     parser.add_argument('-m', '--message',
                         action='store_true',
                         help='print comment message')
+    parser.add_argument('-v', '--votes',
+                        action='store_true',
+                        help=('Look in comments for CI Jobs and detect '
+                              'SUCCESS/FAILURE'))
     parser.add_argument('-p', '--project',
                         help='only list hits for a specific project')
 
     args = parser.parse_args()
-    print_last_comments(args.name, int(args.count), args.message, args.project)
+    print_last_comments(args.name, int(args.count),
+                        args.message, args.project, args.votes)
 
 
 if __name__ == "__main__":
