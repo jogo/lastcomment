@@ -8,12 +8,12 @@ or a CI system.
 Dependencies
 ------------
 
-requests
+`requests`
 
 Help
 -----
 
-./lastcomment.py -h
+    ./lastcomment.py -h
 
 Usage
 -----
