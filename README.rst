@@ -34,3 +34,7 @@ To print the last 30 votes by 'Third Party CI' on the repo openstack/cinder
 To print the contents of the last 30 reviews by 'John Smith'
 
     ./lastcomment.py -n 'John Smith'  -m
+
+To specify a text file names.txt containing names to iterate through
+
+    ./lastcomment.py -f names.txt
