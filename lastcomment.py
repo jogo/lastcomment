@@ -131,8 +131,8 @@ def main():
                         help='unique gerrit name of the reviewer')
     parser.add_argument('-f', '--file',
                         default=None,
-                        help='file containing list of names to search on '
-                             '(overwrites -n)')
+                        help='file containing list of names to search on, '
+                             'single name per line (overwrites -n)')
     parser.add_argument('-m', '--message',
                         action='store_true',
                         help='print comment message')
@@ -150,7 +150,7 @@ def main():
             names = [l.rstrip() for l in f]
 
     for n in names:
-        print 'Checking name: %s' , n
+        print 'Checking name: %s' % n
         try:
             print_last_comments(n, int(args.count), args.message,
                                 args.project, args.votes)
