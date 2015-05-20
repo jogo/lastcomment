@@ -66,8 +66,11 @@ def print_last_comments(name, count, print_message, project, votes):
     failure = collections.defaultdict(int)
 
     # Include review messages in query
-    query = ("https://review.openstack.org/changes/?q=reviewer:\"%s\"&"
-             "o=MESSAGES" % (name))
+    search = "reviewer:\"%s\"" % name
+    if project:
+        search = search + (" AND project:\"%s\"" % project)
+    query = ("https://review.openstack.org/changes/?q=%s&"
+             "o=MESSAGES" % search)
     r = requests.get(query)
     try:
         changes = json.loads(r.text[4:])
