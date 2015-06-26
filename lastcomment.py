@@ -80,9 +80,6 @@ def print_last_comments(name, count, print_message, project, votes):
 
     comments = []
     for change in changes:
-        if project:
-            if change['project'] != project:
-                continue
         for date, message in get_comments(change, name):
             if date is None:
                 # no comments from reviewer yet. This can happen since
