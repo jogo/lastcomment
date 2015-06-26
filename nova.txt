@@ -1,0 +1,6 @@
+VMware NSX CI
+Microsoft Hyper-V CI
+Citrix XenServer CI
+IBM PowerKVM CI
+Virtuozzo Storage CI
+XenProject CI

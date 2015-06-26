@@ -38,3 +38,7 @@ To print the contents of the last 30 reviews by 'John Smith'
 To specify a text file names.txt containing names to iterate through
 
     ./lastcomment.py -f names.txt
+
+To print statistics on nova's third party CI accounts:
+
+    ./lastcomment.py -p openstack/nova -c 60 -f nova.txt -v
