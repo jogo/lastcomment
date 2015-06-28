@@ -31,8 +31,11 @@ class Comment(object):
     def __str__(self):
         return ("%s (%s old) https://review.openstack.org/%s '%s' " % (
             self.date.strftime(TIME_FORMAT),
-            (self.now - self.date),
+            self.age(),
             self.number, self.subject))
+
+    def age(self):
+        return self.now - self.date
 
     def __le__(self, other):
         # self < other
@@ -61,10 +64,7 @@ def get_comments(change, name):
             yield date, body
 
 
-def print_last_comments(name, count, print_message, project, votes):
-    success = collections.defaultdict(int)
-    failure = collections.defaultdict(int)
-
+def query_gerrit(name, count, project):
     # Include review messages in query
     search = "reviewer:\"%s\"" % name
     if project:
@@ -88,28 +88,68 @@ def print_last_comments(name, count, print_message, project, votes):
             comments.append(Comment(date, change['_number'],
                                     change['subject'], message))
 
+    return sorted(comments, key=lambda comment: comment.date,
+                  reverse=True)[0:count]
+
+
+def vote(comment, success, failure, log=False):
+    for line in comment.message.splitlines():
+        if line.startswith("* ") or line.startswith("- "):
+            job = line.split(' ')[1]
+            if " : SUCCESS" in line:
+                success[job] += 1
+                if log:
+                    print line
+            if " : FAILURE" in line:
+                failure[job] += 1
+                if log:
+                    print line
+
+
+def generate_report(name, count, project):
+    result = {'name': name}
+    success = collections.defaultdict(int)
+    failure = collections.defaultdict(int)
+
+    comments = query_gerrit(name, count, project)
+
+    if len(comments) == 0:
+        print "didn't find anything"
+        return None
+
+    print "last seen: %s (%s old)" % (comments[0].date, comments[0].age())
+    result['last'] = str(comments[0].date) + " UTC"
+
+    for comment in comments:
+        vote(comment, success, failure)
+
+    total = sum(success.values()) + sum(failure.values())
+    if total > 0:
+        success_rate = str(int(sum(success.values()) /
+                               float(total) * 100)) + "%"
+        result['rate'] = success_rate
+        print "success rate: %s" % success_rate
+    return result
+
+
+def print_last_comments(name, count, print_message, project, votes):
+    success = collections.defaultdict(int)
+    failure = collections.defaultdict(int)
+
+    comments = query_gerrit(name, count, project)
+
     message = "last %s comments from '%s'" % (count, name)
     if project:
         message += " on project '%s'" % project
     print message
     # sort by time
-    for i, comment in enumerate(sorted(comments,
-                                       key=lambda comment: comment.date,
-                                       reverse=True)[0:count]):
+    for i, comment in enumerate(comments):
         print "[%d] %s" % (i, comment)
         if print_message:
             print "message: \"%s\"" % comment.message
             print
         if votes:
-            for line in comment.message.splitlines():
-                if line.startswith("* ") or line.startswith("- "):
-                    job = line.split(' ')[1]
-                    if " : SUCCESS" in line:
-                        print line
-                        success[job] += 1
-                    if " : FAILURE" in line:
-                        print line
-                        failure[job] += 1
+            vote(comment, success, failure, log=True)
 
     if votes:
         print "success count by job:"
@@ -128,6 +168,7 @@ def main():
                         help='unique gerrit name of the reviewer')
     parser.add_argument('-c', '--count',
                         default=10,
+                        type=int,
                         help='unique gerrit name of the reviewer')
     parser.add_argument('-f', '--file',
                         default=None,
@@ -140,6 +181,9 @@ def main():
                         action='store_true',
                         help=('Look in comments for CI Jobs and detect '
                               'SUCCESS/FAILURE'))
+    parser.add_argument('--json',
+                        help=("Generate report to be stored in the json file"
+                              " specified here. Ignores -v and -m"))
     parser.add_argument('-p', '--project',
                         help='only list hits for a specific project')
 
@@ -149,14 +193,26 @@ def main():
         with open(args.file) as f:
             names = [l.rstrip() for l in f]
 
+    if args.json:
+        print "generating report %s" % args.json
+        print "report is over last %s comments" % args.count
+        report = []
+
     for n in names:
         print 'Checking name: %s' % n
         try:
-            print_last_comments(n, int(args.count), args.message,
-                                args.project, args.votes)
+            if args.json:
+                report.append(generate_report(n, args.count, args.project))
+            else:
+                print_last_comments(n, args.count, args.message,
+                                    args.project, args.votes)
         except Exception as e:
             print e
             pass
+
+    if args.json:
+        with open(args.json, 'w') as f:
+            json.dump(report, f)
 
 
 if __name__ == "__main__":
