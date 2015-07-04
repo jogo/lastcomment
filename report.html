@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>Third Party CI Report</title>
+  <title>OpenStack Third barty CI Report</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
@@ -9,17 +9,32 @@
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.8.1/bootstrap-table.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.8.1/extensions/filter-control/bootstrap-table-filter-control.js"></script>
 </head>
 
 <script>
+  var oneDay = 24 * 60 * 60 * 1000;
+  var oneHour = 60 * 60 * 1000;
+
   function timeFormatter(value, row, index) {
-      var oneDay = 24 * 60 * 60 * 1000;
-      var oneHour = 60 * 60 * 1000;
       var diff = Date.now() - Date.parse(value);
       if (Math.floor(diff/oneDay)<1) {
         return Math.floor(diff/oneHour) + " Hours"
       }
       return Math.floor(diff/oneDay) + " Days"
+  }
+
+  function isDataStale(time) {
+      var diff = Date.now() - Date.parse(time);
+      var days = Math.floor(diff/oneDay);
+      var hours = Math.floor(diff/oneDay);
+      if (days>1) {
+          return "Warning: data is " + days + " days old";
+      } else if (hours > 1) {
+          return "Warning: Data is " + hours + "days old";
+      } else {
+          return "Data is up to date";
+      }
   }
 
   function timeStyle(value, row, index) {
@@ -41,7 +56,10 @@
 
   }
 
-
+  function responseHandler(res) {
+    document.getElementById("demo").innerHTML = isDataStale(res.timestamp);
+    return res.rows
+  }
 
 </script>
 
@@ -49,13 +67,14 @@
 <body>
 
 <div class="container">
-  <h1>Third party CI Report</h1>
-  <table data-toggle="table" data-url="lastcomment.json">
+  <h1>OpenStack Third Party CI Report</h1>
+  <p id="demo"></p>
+  <table data-toggle="table" data-url="lastcomment.json" data-filter-control="true" data-response-handler="responseHandler">
     <thead>
       <tr>
-        <th data-field="name">Name</th>
-        <th data-field="last" data-formatter="timeFormatter" data-cell-style="timeStyle">Last Seen</th>
-        <th data-field="rate" data-cell-style="rateStyle">Success Rate</th>
+        <th data-field="name" data-filter-control="input">Name</th>
+        <th data-field="last" data-formatter="timeFormatter" data-cell-style="timeStyle" data-sortable="true">Last Seen</th>
+        <th data-field="rate" data-cell-style="rateStyle" data-sortable="true">Success Rate</th>
       </tr>
     </thead>
   </table>

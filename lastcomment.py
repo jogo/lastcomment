@@ -182,8 +182,11 @@ def main():
                         help=('Look in comments for CI Jobs and detect '
                               'SUCCESS/FAILURE'))
     parser.add_argument('--json',
-                        help=("Generate report to be stored in the json file"
-                              " specified here. Ignores -v and -m"))
+                        nargs='?',
+                        const='lastcomment.json',
+                        help=("Generate report to be stored in the json file "
+                              "specified here. Ignores -v and -m "
+                              "(default: 'lastcomment.json')"))
     parser.add_argument('-p', '--project',
                         help='only list hits for a specific project')
 
@@ -196,13 +199,18 @@ def main():
     if args.json:
         print "generating report %s" % args.json
         print "report is over last %s comments" % args.count
-        report = []
+        report = {}
+        timestamp = (str(datetime.datetime.utcnow().replace(microsecond=0)) +
+                     " UTC")
+        report['timestamp'] = timestamp
+        report['rows'] = []
 
     for n in names:
         print 'Checking name: %s' % n
         try:
             if args.json:
-                report.append(generate_report(n, args.count, args.project))
+                report['rows'].append(generate_report(
+                    n, args.count, args.project))
             else:
                 print_last_comments(n, args.count, args.message,
                                     args.project, args.votes)
