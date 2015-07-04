@@ -30,6 +30,9 @@
   }
 
   function rateStyle(value, row, index) {
+      if (typeof value === 'undefined'){
+          return {classes: 'danger'}
+      }
       var num = parseInt(value.substring(0,value.length - 1))
       if (num < 60 ) {
           return {classes: 'danger'}
@@ -47,7 +50,7 @@
 
 <div class="container">
   <h1>Third party CI Report</h1>
-  <table data-toggle="table" data-url="data.json">
+  <table data-toggle="table" data-url="lastcomment.json">
     <thead>
       <tr>
         <th data-field="name">Name</th>
