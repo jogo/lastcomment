@@ -51,4 +51,4 @@ To generate a html report for cinder's third party CI accounts on http://localho
 Cloud-init
 -----------
 
-To run this on a cloud server using cloud-init use the ``cloud.init.txt`` file.
+To run this on a cloud server using cloud-init use the ``user-data.txt`` file.
