@@ -27,11 +27,15 @@
   function isDataStale(time) {
       var diff = Date.now() - Date.parse(time);
       var days = Math.floor(diff/oneDay);
-      var hours = Math.floor(diff/oneDay);
-      if (days>1) {
+      var hours = Math.floor(diff/oneHour);
+      if (days === 1) {
+          return "Warning: data is " + days + " day old";
+      } else if (days > 1) {
           return "Warning: data is " + days + " days old";
+      } else if (hours === 1) {
+          return "Warning: Data is " + hours + " hour old";
       } else if (hours > 1) {
-          return "Warning: Data is " + hours + "days old";
+          return "Warning: Data is " + hours + " hours old";
       } else {
           return "Data is up to date";
       }
