@@ -35,9 +35,9 @@ To print the contents of the last 30 reviews by 'John Smith'
 
     ./lastcomment.py -n 'John Smith'  -m
 
-To specify a text file names.txt containing names to iterate through
+To specify a yaml file names.yaml containing projects and names to iterate through
 
-    ./lastcomment.py -f names.txt
+    ./lastcomment.py -f names.yaml
 
 To print statistics on nova's third party CI accounts:
 

@@ -7,6 +7,7 @@ import collections
 import datetime
 import json
 import sys
+import yaml
 
 import requests
 
@@ -107,7 +108,7 @@ def vote(comment, success, failure, log=False):
 
 
 def generate_report(name, count, project):
-    result = {'name': name}
+    result = {'name': name, 'project': project}
     success = collections.defaultdict(int)
     failure = collections.defaultdict(int)
 
@@ -172,8 +173,9 @@ def main():
                         help='unique gerrit name of the reviewer')
     parser.add_argument('-f', '--file',
                         default=None,
-                        help='file containing list of names to search on, '
-                             'single name per line (overwrites -n)')
+                        help='yaml file containing list of names to search on'
+                             'project: name'
+                             ' (overwrites -p and -n)')
     parser.add_argument('-m', '--message',
                         action='store_true',
                         help='print comment message')
@@ -191,10 +193,10 @@ def main():
                         help='only list hits for a specific project')
 
     args = parser.parse_args()
-    names = [args.name]
+    names = {args.project: [args.name]}
     if args.file:
         with open(args.file) as f:
-            names = [l.rstrip() for l in f]
+            names = yaml.load(f)
 
     if args.json:
         print "generating report %s" % args.json
@@ -205,18 +207,20 @@ def main():
         report['timestamp'] = timestamp
         report['rows'] = []
 
-    for n in names:
-        print 'Checking name: %s' % n
-        try:
-            if args.json:
-                report['rows'].append(generate_report(
-                    n, args.count, args.project))
-            else:
-                print_last_comments(n, args.count, args.message,
-                                    args.project, args.votes)
-        except Exception as e:
-            print e
-            pass
+    for project in names:
+        print 'Checking project: %s' % project
+        for name in names[project]:
+            print 'Checking name: %s' % name
+            try:
+                if args.json:
+                    report['rows'].append(generate_report(
+                        name, args.count, project))
+                else:
+                    print_last_comments(name, args.count, args.message,
+                                        project, args.votes)
+            except Exception as e:
+                print e
+                pass
 
     if args.json:
         with open(args.json, 'w') as f:
