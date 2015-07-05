@@ -39,13 +39,13 @@ To specify a yaml file names.yaml containing projects and names to iterate throu
 
     ./lastcomment.py -f names.yaml
 
-To print statistics on nova's third party CI accounts:
+To print statistics on third party CI accounts:
 
-    ./lastcomment.py -p openstack/nova -c 60 -f nova.txt -v
+    ./lastcomment.py -c 100 -f ci.yaml -v
 
 To generate a html report for cinder's third party CI accounts on http://localhost:8000/report:
 
-    ./lastcomment.py -p openstack/cinder -f cinder.txt -c 100 --json lastcomment.json
+    ./lastcomment.py -f ci.yaml -c 100 --json lastcomment.json
     python -m SimpleHTTPServer
 
 Cloud-init
