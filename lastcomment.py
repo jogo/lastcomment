@@ -3,6 +3,7 @@
 """Print the last time a reviewer(bot) left a comment."""
 
 import argparse
+import calendar
 import collections
 import datetime
 import json
@@ -119,7 +120,7 @@ def generate_report(name, count, project):
         return None
 
     print "last seen: %s (%s old)" % (comments[0].date, comments[0].age())
-    result['last'] = str(comments[0].date) + " UTC"
+    result['last'] = epoch(comments[0].date)
 
     for comment in comments:
         vote(comment, success, failure)
@@ -159,6 +160,10 @@ def print_last_comments(name, count, print_message, project, votes):
         print "failure count by job:"
         for job in failure.iterkeys():
             print "* %s: %d" % (job, failure[job])
+
+
+def epoch(timestamp):
+    return int(calendar.timegm(timestamp.timetuple()))
 
 
 def main():
@@ -202,8 +207,7 @@ def main():
         print "generating report %s" % args.json
         print "report is over last %s comments" % args.count
         report = {}
-        timestamp = (str(datetime.datetime.utcnow().replace(microsecond=0)) +
-                     " UTC")
+        timestamp = epoch(datetime.datetime.utcnow())
         report['timestamp'] = timestamp
         report['rows'] = []
 

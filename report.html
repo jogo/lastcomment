@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>OpenStack Third barty CI Report</title>
+  <title>OpenStack Third party CI Report</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
@@ -17,7 +17,7 @@
   var oneHour = 60 * 60 * 1000;
 
   function timeFormatter(value, row, index) {
-      var diff = Date.now() - Date.parse(value);
+      var diff = Date.now() - value*1000;
       if (Math.floor(diff/oneDay)<1) {
         return Math.floor(diff/oneHour) + " Hours"
       }
@@ -25,7 +25,7 @@
   }
 
   function isDataStale(time) {
-      var diff = Date.now() - Date.parse(time);
+      var diff = Date.now() - time*1000;
       var days = Math.floor(diff/oneDay);
       var hours = Math.floor(diff/oneHour);
       if (days === 1) {
@@ -42,7 +42,7 @@
   }
 
   function timeStyle(value, row, index) {
-      if (value.includes("Days")) {
+      if (value.indexOf("Days") > 0) {
           return {classes: 'danger'}
       }
       return {}
