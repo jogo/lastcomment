@@ -61,7 +61,7 @@
   }
 
   function responseHandler(res) {
-    document.getElementById("demo").innerHTML = isDataStale(res.timestamp);
+    document.getElementById("stale").innerHTML = isDataStale(res.timestamp);
     return res.rows
   }
 
@@ -72,7 +72,7 @@
 
 <div class="container">
   <h1>OpenStack Third Party CI Report</h1>
-  <p id="demo"></p>
+  <p id="stale"></p>
   <table data-toggle="table" data-url="lastcomment.json" data-filter-control="true" data-response-handler="responseHandler">
     <thead>
       <tr>
