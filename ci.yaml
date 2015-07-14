@@ -5,6 +5,7 @@ openstack/nova:
     -  IBM PowerKVM CI
     -  Virtuozzo Storage CI
     -  XenProject CI
+    - DB Datasets CI
     - Jenkins
 openstack/cinder:
     - IBM DB2 CI
@@ -44,3 +45,7 @@ openstack/neutron:
     - Ryu CI
     - VMware NSX CI
     - Jenkins
+openstack/manila:
+    - Jenkins
+    - NetApp CI
+    - HP Storage CI
