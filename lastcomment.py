@@ -21,6 +21,7 @@ class Comment(object):
     number = None
     subject = None
     now = None
+    gerrit_url = None
 
     def __init__(self, date, number, subject, message):
         super(Comment, self).__init__()
@@ -31,9 +32,10 @@ class Comment(object):
         self.now = datetime.datetime.utcnow().replace(microsecond=0)
 
     def __str__(self):
-        return ("%s (%s old) https://review.openstack.org/%s '%s' " % (
+        return ("%s (%s old) %s/%s '%s' " % (
             self.date.strftime(TIME_FORMAT),
             self.age(),
+            self.gerrit_url,
             self.number, self.subject))
 
     def age(self):
@@ -66,13 +68,13 @@ def get_comments(change, name):
             yield date, body
 
 
-def query_gerrit(name, count, project):
+def query_gerrit(gerrit_url, name, count, project):
     # Include review messages in query
     search = "reviewer:\"%s\"" % name
     if project:
         search = search + (" AND project:\"%s\"" % project)
-    query = ("https://review.openstack.org/changes/?q=%s&"
-             "o=MESSAGES" % search)
+    query = ("%s/changes/?q=%s&"
+             "o=MESSAGES" % (gerrit_url, search))
     r = requests.get(query)
     try:
         changes = json.loads(r.text[4:])
@@ -108,12 +110,12 @@ def vote(comment, success, failure, log=False):
                     print line
 
 
-def generate_report(name, count, project):
+def generate_report(gerrit_url, name, count, project):
     result = {'name': name, 'project': project}
     success = collections.defaultdict(int)
     failure = collections.defaultdict(int)
 
-    comments = query_gerrit(name, count, project)
+    comments = query_gerrit(gerrit_url, name, count, project)
 
     if len(comments) == 0:
         print "didn't find anything"
@@ -134,11 +136,11 @@ def generate_report(name, count, project):
     return result
 
 
-def print_last_comments(name, count, print_message, project, votes):
+def print_last_comments(gerrit_url, name, count, print_message, project, votes):
     success = collections.defaultdict(int)
     failure = collections.defaultdict(int)
 
-    comments = query_gerrit(name, count, project)
+    comments = query_gerrit(gerrit_url, name, count, project)
 
     message = "last %s comments from '%s'" % (count, name)
     if project:
@@ -196,6 +198,9 @@ def main():
                               "(default: 'lastcomment.json')"))
     parser.add_argument('-p', '--project',
                         help='only list hits for a specific project')
+    parser.add_argument('-g', '--gerrit-url',
+                        default='https://review.openstack.org/',
+                        help='Gerrit server http/https url')
 
     args = parser.parse_args()
     names = {args.project: [args.name]}
@@ -217,11 +222,11 @@ def main():
             print 'Checking name: %s' % name
             try:
                 if args.json:
-                    report['rows'].append(generate_report(
+                    report['rows'].append(generate_report(args.gerrit_url,
                         name, args.count, project))
                 else:
-                    print_last_comments(name, args.count, args.message,
-                                        project, args.votes)
+                    print_last_comments(args.gerrit_url, name, args.count,
+                                        args.message, project, args.votes)
             except Exception as e:
                 print e
                 pass
