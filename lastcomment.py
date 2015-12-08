@@ -177,7 +177,7 @@ def main():
     parser.add_argument('-c', '--count',
                         default=10,
                         type=int,
-                        help='unique gerrit name of the reviewer')
+                        help='Max number of results to return')
     parser.add_argument('-f', '--file',
                         default=None,
                         help='yaml file containing list of names to search on'
