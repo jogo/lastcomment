@@ -12,6 +12,21 @@ import yaml
 
 import requests
 
+try:
+    # Disable InsecurePlatformWarning warnings as documented here
+    # https://github.com/kennethreitz/requests/issues/2214
+    from requests.packages.urllib3.exceptions import InsecurePlatformWarning
+    from requests.packages.urllib3.exceptions import InsecureRequestWarning
+    requests.packages.urllib3.disable_warnings(InsecurePlatformWarning)
+    requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+except ImportError:
+    # If there's an import error, then urllib3 may be packaged
+    # separately, so apply it there too
+    import urllib3
+    from urllib3.exceptions import InsecurePlatformWarning
+    from urllib3.exceptions import InsecureRequestWarning
+    urllib3.disable_warnings(InsecurePlatformWarning)
+    urllib3.disable_warnings(InsecureRequestWarning)
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
@@ -21,6 +36,7 @@ class Comment(object):
     number = None
     subject = None
     now = None
+    gerrit_url = None
 
     def __init__(self, date, number, subject, message):
         super(Comment, self).__init__()
@@ -31,9 +47,10 @@ class Comment(object):
         self.now = datetime.datetime.utcnow().replace(microsecond=0)
 
     def __str__(self):
-        return ("%s (%s old) https://review.openstack.org/%s '%s' " % (
+        return ("%s (%s old) %s/%s '%s' " % (
             self.date.strftime(TIME_FORMAT),
             self.age(),
+            self.gerrit_url,
             self.number, self.subject))
 
     def age(self):
@@ -66,14 +83,14 @@ def get_comments(change, name):
             yield date, body
 
 
-def query_gerrit(name, count, project):
+def query_gerrit(gerrit_url, name, count, project, verify=True):
     # Include review messages in query
     search = "reviewer:\"%s\"" % name
     if project:
         search = search + (" AND project:\"%s\"" % project)
-    query = ("https://review.openstack.org/changes/?q=%s&"
-             "o=MESSAGES" % search)
-    r = requests.get(query)
+    query = ("%s/changes/?q=%s&"
+             "o=MESSAGES" % (gerrit_url, search))
+    r = requests.get(query, verify=verify)
     try:
         changes = json.loads(r.text[4:])
     except ValueError:
@@ -108,12 +125,12 @@ def vote(comment, success, failure, log=False):
                     print line
 
 
-def generate_report(name, count, project):
+def generate_report(gerrit_url, name, count, project, verify):
     result = {'name': name, 'project': project}
     success = collections.defaultdict(int)
     failure = collections.defaultdict(int)
 
-    comments = query_gerrit(name, count, project)
+    comments = query_gerrit(gerrit_url, name, count, project, verify)
 
     if len(comments) == 0:
         print "didn't find anything"
@@ -134,11 +151,12 @@ def generate_report(name, count, project):
     return result
 
 
-def print_last_comments(name, count, print_message, project, votes):
+def print_last_comments(gerrit_url, name, count, print_message, project,
+                        votes, verify):
     success = collections.defaultdict(int)
     failure = collections.defaultdict(int)
 
-    comments = query_gerrit(name, count, project)
+    comments = query_gerrit(gerrit_url, name, count, project, verify)
 
     message = "last %s comments from '%s'" % (count, name)
     if project:
@@ -175,7 +193,7 @@ def main():
     parser.add_argument('-c', '--count',
                         default=10,
                         type=int,
-                        help='unique gerrit name of the reviewer')
+                        help='Max number of results to return')
     parser.add_argument('-f', '--file',
                         default=None,
                         help='yaml file containing list of names to search on'
@@ -196,6 +214,12 @@ def main():
                               "(default: 'lastcomment.json')"))
     parser.add_argument('-p', '--project',
                         help='only list hits for a specific project')
+    parser.add_argument('-g', '--gerrit-url',
+                        default='https://review.openstack.org/',
+                        help='Gerrit server http/https url')
+    parser.add_argument('--no-verify',
+                        action='store_false',
+                        help='Ignore gerrit server certificate validity')
 
     args = parser.parse_args()
     names = {args.project: [args.name]}
@@ -217,11 +241,12 @@ def main():
             print 'Checking name: %s' % name
             try:
                 if args.json:
-                    report['rows'].append(generate_report(
-                        name, args.count, project))
+                    report['rows'].append(generate_report(args.gerrit_url,
+                        name, args.count, project, args.no_verify))
                 else:
-                    print_last_comments(name, args.count, args.message,
-                                        project, args.votes)
+                    print_last_comments(args.gerrit_url, name, args.count,
+                                        args.message, project, args.votes,
+                                        args.no_verify)
             except Exception as e:
                 print e
                 pass
