@@ -70,12 +70,13 @@ class Comment(object):
     now = None
     gerrit_url = None
 
-    def __init__(self, date, number, subject, message):
+    def __init__(self, date, number, subject, message, gerrit_url):
         super(Comment, self).__init__()
         self.date = date
         self.number = number
         self.subject = subject
         self.message = message
+        self.gerrit_url = gerrit_url
         self.now = datetime.datetime.utcnow().replace(microsecond=0)
 
     def __str__(self):
@@ -140,7 +141,7 @@ def query_gerrit(gerrit_url, account, count, project, verify=True):
                 # 'Uploaded patch set X.' is considered a comment.
                 continue
             comments.append(Comment(date, change['_number'],
-                                    change['subject'], message))
+                                    change['subject'], message, gerrit_url))
 
     return sorted(comments, key=lambda comment: comment.date,
                   reverse=True)[0:count]
@@ -269,7 +270,7 @@ def main():
     parser.add_argument('-p', '--project',
                         help='only list hits for a specific project')
     parser.add_argument('-g', '--gerrit-url',
-                        default='https://review.openstack.org/',
+                        default='https://review.openstack.org',
                         help='Gerrit server http/https url')
     parser.add_argument('--no-verify',
                         action='store_false',
