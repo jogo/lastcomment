@@ -8,6 +8,7 @@ import collections
 import datetime
 import json
 import sys
+import urllib
 import yaml
 
 import requests
@@ -29,6 +30,37 @@ except ImportError:
     urllib3.disable_warnings(InsecureRequestWarning)
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
+class Account(object):
+    _account_id = None
+    name = None
+    email = None
+    username = None
+
+    def __init__(self, account_info={}):
+        super(Account, self).__init__()
+        self._account_id = account_info.get('_account_id', 0)
+        self.name = account_info.get('name', None)
+        self.email = account_info.get('email', None)
+        self.username = account_info.get('username', None)
+
+    def __str__(self):
+        a = []
+        if self.name:
+            a.append("'%s'" % self.name)
+        if self.username:
+            a.append(self.username)
+        if self.email:
+            a.append("<%s>" % self.email)
+        if a:
+            return "ID %s (%s)" % (self._account_id, ", ".join(a))
+        else:
+            return "ID %s" % self._account_id
+
+    def __le__(self, other):
+        # self < other
+        return self._account_id < other._account_id
 
 
 class Comment(object):
@@ -65,13 +97,16 @@ class Comment(object):
         return repr((self.date, self.number))
 
 
-def get_comments(change, name):
-    """Generator that returns all comments by name on a given change."""
+def get_comments(change, account):
+    """Generator that returns all comments by account on a given change."""
     body = None
     for message in change['messages']:
-        if 'author' in message and message['author']['name'] == name:
+        if ('author' in message and
+            '_account_id' in message['author'] and
+            message['author']['_account_id'] == account._account_id):
+
             if (message['message'].startswith("Uploaded patch set") and
-               len(message['message'].split()) is 4):
+                len(message['message'].split()) is 4):
                 # comment is auto created from posting a new patch
                 continue
             date = message['date']
@@ -83,13 +118,13 @@ def get_comments(change, name):
             yield date, body
 
 
-def query_gerrit(gerrit_url, name, count, project, verify=True):
+def query_gerrit(gerrit_url, account, count, project, verify=True):
     # Include review messages in query
-    search = "reviewer:\"%s\"" % name
+    search = "reviewer:{%s}" % account._account_id
     if project:
-        search = search + (" AND project:\"%s\"" % project)
+        search = search + (" AND project:{%s}" % project)
     query = ("%s/changes/?q=%s&"
-             "o=MESSAGES" % (gerrit_url, search))
+             "o=MESSAGES&pp=0" % (gerrit_url, urllib.quote_plus(search)))
     r = requests.get(query, verify=verify)
     try:
         changes = json.loads(r.text[4:])
@@ -99,7 +134,7 @@ def query_gerrit(gerrit_url, name, count, project, verify=True):
 
     comments = []
     for change in changes:
-        for date, message in get_comments(change, name):
+        for date, message in get_comments(change, account):
             if date is None:
                 # no comments from reviewer yet. This can happen since
                 # 'Uploaded patch set X.' is considered a comment.
@@ -109,6 +144,24 @@ def query_gerrit(gerrit_url, name, count, project, verify=True):
 
     return sorted(comments, key=lambda comment: comment.date,
                   reverse=True)[0:count]
+
+
+def lookup_account(gerrit_url, account_id, verify=True):
+    """Look up account information.
+
+    An account "ID" can be any uniquely identifying account information. See the
+    API documentation for more information:
+
+    https://review.openstack.org/Documentation/rest-api-accounts.html#account-id
+    """
+
+    query = "%s/accounts/%s?pp=0" % (gerrit_url, urllib.quote_plus(account_id))
+    r = requests.get(query, verify=verify)
+    try:
+        return Account(json.loads(r.text[4:]))
+    except ValueError:
+        print "account lookup for '%s' failed with:\n%s" % (account_id, r.text)
+        sys.exit(1)
 
 
 def vote(comment, success, failure, log=False):
@@ -125,12 +178,12 @@ def vote(comment, success, failure, log=False):
                     print line
 
 
-def generate_report(gerrit_url, name, count, project, verify):
-    result = {'name': name, 'project': project}
+def generate_report(gerrit_url, account, count, project, verify):
+    result = {'account': account.__dict__, 'project': project}
     success = collections.defaultdict(int)
     failure = collections.defaultdict(int)
 
-    comments = query_gerrit(gerrit_url, name, count, project, verify)
+    comments = query_gerrit(gerrit_url, account, count, project, verify)
 
     if len(comments) == 0:
         print "didn't find anything"
@@ -151,14 +204,14 @@ def generate_report(gerrit_url, name, count, project, verify):
     return result
 
 
-def print_last_comments(gerrit_url, name, count, print_message, project,
+def print_last_comments(gerrit_url, account, count, print_message, project,
                         votes, verify):
     success = collections.defaultdict(int)
     failure = collections.defaultdict(int)
 
-    comments = query_gerrit(gerrit_url, name, count, project, verify)
+    comments = query_gerrit(gerrit_url, account, count, project, verify)
 
-    message = "last %s comments from '%s'" % (count, name)
+    message = "last %s comments from '%s'" % (count, account.name)
     if project:
         message += " on project '%s'" % project
     print message
@@ -223,9 +276,16 @@ def main():
 
     args = parser.parse_args()
     names = {args.project: [args.name]}
+    accounts = {}
     if args.file:
         with open(args.file) as f:
             names = yaml.load(f)
+
+    for project in names:
+        for id in names[project]:
+            if id in accounts:
+                continue
+            accounts[id] = lookup_account(args.gerrit_url, id, args.no_verify)
 
     if args.json:
         print "generating report %s" % args.json
@@ -238,13 +298,14 @@ def main():
     for project in names:
         print 'Checking project: %s' % project
         for name in names[project]:
-            print 'Checking name: %s' % name
+            account = accounts[name]
+            print 'Checking account: %s' % account
             try:
                 if args.json:
                     report['rows'].append(generate_report(args.gerrit_url,
-                        name, args.count, project, args.no_verify))
+                        account, args.count, project, args.no_verify))
                 else:
-                    print_last_comments(args.gerrit_url, name, args.count,
+                    print_last_comments(args.gerrit_url, account, args.count,
                                         args.message, project, args.votes,
                                         args.no_verify)
             except Exception as e:
