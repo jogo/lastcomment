@@ -102,11 +102,11 @@ def get_comments(change, account):
     body = None
     for message in change['messages']:
         if ('author' in message and
-            '_account_id' in message['author'] and
-            message['author']['_account_id'] == account._account_id):
+                '_account_id' in message['author'] and
+                message['author']['_account_id'] == account._account_id):
 
             if (message['message'].startswith("Uploaded patch set") and
-                len(message['message'].split()) is 4):
+                    len(message['message'].split()) is 4):
                 # comment is auto created from posting a new patch
                 continue
             date = message['date']
@@ -149,8 +149,8 @@ def query_gerrit(gerrit_url, account, count, project, verify=True):
 def lookup_account(gerrit_url, account_id, verify=True):
     """Look up account information.
 
-    An account "ID" can be any uniquely identifying account information. See the
-    API documentation for more information:
+    An account "ID" can be any uniquely identifying account information. See
+    the API documentation for more information:
 
     https://review.openstack.org/Documentation/rest-api-accounts.html#account-id
     """
@@ -242,7 +242,8 @@ def main():
                                      'reviewer')
     parser.add_argument('-n', '--name',
                         default="Elastic Recheck",
-                        help='unique gerrit name of the reviewer')
+                        help='gerrit use (name, id, username or email) of '
+                             'the reviewer')
     parser.add_argument('-c', '--count',
                         default=10,
                         type=int,
@@ -302,8 +303,9 @@ def main():
             print 'Checking account: %s' % account
             try:
                 if args.json:
-                    report['rows'].append(generate_report(args.gerrit_url,
-                        account, args.count, project, args.no_verify))
+                    report['rows'].append(generate_report(
+                        args.gerrit_url, account, args.count,
+                        project, args.no_verify))
                 else:
                     print_last_comments(args.gerrit_url, account, args.count,
                                         args.message, project, args.votes,
